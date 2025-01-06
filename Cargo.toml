@@ -1,0 +1,18 @@
+[package]
+name = "Chaum-Pedersen-Protocol"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = "1.42.0"
+tonic = "0.12.3"
+num-bigint = "0.4.6"
+zkp_chaum_pedersen = { path = "./zkp_chaum_pedersen" }
+
+[[bin]]
+name = "verifier"
+path = "./src/verifier.rs"
+
+[[bin]]
+name = "prover"
+path = "./src/prover.rs"
