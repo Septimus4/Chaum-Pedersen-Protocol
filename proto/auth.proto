@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+package auth;
+
+// This .proto defines messages and services for Zero-Knowledge Proof (ZKP) based authentication.
+// The protocol consists of:
+//  1) Registration (client sends public values y1, y2).
+//  2) Challenge issuance (server sends back challenge c).
+//  3) Challenge answer (client provides s, server verifies and returns a session ID).
+
+// ---------- Registration ---------- //
+
+// Prover registers with the server by sending y1 = alpha^x mod p and y2 = beta^x mod p.
+message RegisterRequest {
+  // Username or unique identifier for the user
+  string user = 1;
+
+  // Public value y1 = alpha^x mod p
+  bytes y1 = 2;
+
+  // Public value y2 = beta^x mod p
+  bytes y2 = 3;
+}
+
+// Empty response indicating registration success
+message RegisterResponse {}
+
+// ---------- Challenge Creation ---------- //
+
+// Prover requests an authentication challenge by sending r1 = alpha^k mod p and r2 = beta^k mod p.
+message CreateAuthenticationChallengeRequest {
+  // The user requesting authentication
+  string user = 1;
+
+  // First part of the commitment r1 = alpha^k mod p
+  bytes r1 = 2;
+
+  // Second part of the commitment r2 = beta^k mod p
+  bytes r2 = 3;
+}
+
+// Server responds with an auth_id to track the session and the challenge c
+message CreateAuthenticationChallengeResponse {
+  string auth_id = 1; // Unique ID to correlate the challenge
+  bytes c = 2;        // Challenge (hash or random value)
+}
+
+// ---------- Challenge Answer / Verification ---------- //
+
+// Prover sends solution s = k - c * x mod q for the challenge
+message VerifyAuthenticationRequest {
+  // The ID of the ongoing authentication session
+  string auth_id = 1;
+
+  // The computed solution s to the challenge
+  bytes s = 2;
+}
+
+// Server responds with a session_id if the solution is correct
+message VerifyAuthenticationResponse {
+  string session_id = 1;
+}
+
+// ---------- Service Definition ---------- //
+
+service Auth {
+  // Register the user on the server
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+
+  // Create (issue) a challenge for the user
+  rpc CreateAuthenticationChallenge(CreateAuthenticationChallengeRequest)
+      returns (CreateAuthenticationChallengeResponse);
+
+  // Verify the prover’s response to the challenge
+  rpc VerifyAuthentication(VerifyAuthenticationRequest)
+      returns (VerifyAuthenticationResponse);
+}
