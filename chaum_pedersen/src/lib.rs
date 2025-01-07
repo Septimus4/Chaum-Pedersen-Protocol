@@ -101,3 +101,80 @@ impl ZKP {
         (alpha, beta, p, q)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use num_bigint::BigUint;
+    use num_traits::One;
+
+    #[test]
+    fn new_creates_zkp_with_constants() {
+        let zkp = ZKP::new();
+        let (alpha, beta, p, q) = ZKP::get_constants();
+        assert_eq!(zkp.alpha, alpha);
+        assert_eq!(zkp.beta, beta);
+        assert_eq!(zkp.p, p);
+        assert_eq!(zkp.q, q);
+    }
+
+    #[test]
+    fn compute_pair_returns_correct_values() {
+        let zkp = ZKP::new();
+        let exp = BigUint::one();
+        let (a, b) = zkp.compute_pair(&exp);
+        assert_eq!(a, zkp.alpha.modpow(&exp, &zkp.p));
+        assert_eq!(b, zkp.beta.modpow(&exp, &zkp.p));
+    }
+
+    #[test]
+    fn solve_returns_correct_value() {
+        let zkp = ZKP::new();
+        let k = BigUint::one();
+        let c = BigUint::one();
+        let x = BigUint::one();
+        let result = zkp.solve(&k, &c, &x);
+        assert_eq!(result, (k + &zkp.q - (c * x) % &zkp.q) % &zkp.q);
+    }
+
+    #[test]
+    fn verify_returns_true_for_valid_inputs() {
+        let zkp = ZKP::new();
+
+        // 1) Pick a random secret exponent x
+        let x = ZKP::generate_random_number_below(&zkp.q);
+
+        // 2) Compute y1 = alpha^x mod p and y2 = beta^x mod p
+        let y1 = zkp.alpha.modpow(&x, &zkp.p);
+        let y2 = zkp.beta.modpow(&x, &zkp.p);
+
+        // 3) Pick an ephemeral k
+        let k = ZKP::generate_random_number_below(&zkp.q);
+
+        // 4) Compute (r1, r2) = (alpha^k mod p, beta^k mod p)
+        let (r1, r2) = zkp.compute_pair(&k);
+
+        // 5) Pick a challenge c
+        let c = ZKP::generate_random_number_below(&zkp.q);
+
+        // 6) Compute the response s = k - c*x (mod q)
+        let s = zkp.solve(&k, &c, &x);
+
+        // 7) Finally, verify
+        assert!(zkp.verify(&r1, &r2, &y1, &y2, &c, &s));
+    }
+
+    #[test]
+    fn generate_random_number_below_returns_value_below_limit() {
+        let limit = BigUint::from(100u32);
+        let random_number = ZKP::generate_random_number_below(&limit);
+        assert!(random_number < limit);
+    }
+
+    #[test]
+    fn generate_random_string_returns_string_of_correct_length() {
+        let size = 10;
+        let random_string = ZKP::generate_random_string(size);
+        assert_eq!(random_string.len(), size);
+    }
+}
